@@ -82,9 +82,10 @@ The add-in displays the number of slices and the size of each slice, along with 
 <a name="additional-resources"></a>
 ## Additional resources ##
 
-- [Office Add-ins](http://msdn.microsoft.com/library/office/jj220060.aspx)
+- [Office Add-ins](http://msdn.microsoft.com/library/office/jj220060.aspx) documentation on MSDN
 - [Document.getFileAsync method](http://msdn.microsoft.com/library/office/apps/jj715284.aspx)
 - [File.getSliceAsync method](http://msdn.microsoft.com/library/office/apps/jj715281.aspx)
+- [More Add-in samples](https://github.com/OfficeDev?utf8=%E2%9C%93&query=-Add-in)
 
 ## Copyright
 Copyright (c) 2015 Microsoft. All rights reserved.
