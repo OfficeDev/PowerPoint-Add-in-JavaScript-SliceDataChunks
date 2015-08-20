@@ -68,14 +68,14 @@ The add-in displays the number of slices and the size of each slice, along with 
 ## Troubleshooting
 
 - If the add-in starts with a blank presentation, ensure that the **StartAction** property of the EBookPublisher project is set to *Adventure Works.pptx* (not to *New PowerPoint Presentation*).
-- If the add-in opens in read-only mode, click the **Enable editing** button.
+- If the presentation opens in read-only mode, click the **Enable editing** button.
 - If the add-in does not appear in the task pane of the presentation, Choose **Insert > My Add-ins > EBook Publisher**.
 
 
 <a name="questions"></a>
 ## Questions and comments
 
-- If you have any trouble running this sample, please [log an issue](https://github.com/OfficeDev/PowerPoint-Add-in-JavaScript-BindContentControls).
+- If you have any trouble running this sample, please [log an issue](https://github.com/OfficeDev/PowerPoint-Add-in-JavaScript-SliceDataChunks).
 - Questions about Office Add-ins development in general should be posted to [Stack Overflow](http://stackoverflow.com/questions/tagged/office-addins). Make sure that your questions or comments are tagged with [office-addins].
 
 
@@ -83,6 +83,7 @@ The add-in displays the number of slices and the size of each slice, along with 
 ## Additional resources ##
 
 - [Office Add-ins](http://msdn.microsoft.com/library/office/jj220060.aspx) documentation on MSDN
+- [Get the whole document from an add-in for PowerPoint or Word](https://msdn.microsoft.com/library/office/jj715279.aspx)
 - [Document.getFileAsync method](http://msdn.microsoft.com/library/office/apps/jj715284.aspx)
 - [File.getSliceAsync method](http://msdn.microsoft.com/library/office/apps/jj715281.aspx)
 - [More Add-in samples](https://github.com/OfficeDev?utf8=%E2%9C%93&query=-Add-in)
