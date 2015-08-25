@@ -21,7 +21,7 @@ This sample shows how to use JavaScript in a PowerPoint 2013 task pane add-in to
 This sample requires the following:  
 
   - PowerPoint 2013.
-  - Visual Studio 2013 with Update 5 or Visual Studio 2015.  
+  - Visual Studio 2013 (Update 5) or Visual Studio 2015, with Microsoft Office Developer Tools.  
   - Any browser that supports ECMAScript 5.1, HTML5, and CSS3, such as Chrome 13, Firefox 5, Safari 5.0.6, or a later version of these browsers. If using Internet Explorer, requires Internet Explorer 10 to support the *btoa* encoding method.
   
 
