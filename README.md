@@ -29,27 +29,25 @@ This sample requires the following:
 ## Key components of the sample
 The sample solution contains the following key files:
 
-**EBookPublisher project**
+**EBookPublisher** project
 
-- EBookPublisher.xml: The manifest file for the PowerPoint add-in.
-- Adventure Works.ppt: Starter document with 1,024 slides. 
+- [EBookPublisher.xml](https://github.com/OfficeDev/PowerPoint-Add-in-JavaScript-SliceDataChunks/blob/master/EBookPublisher/EBookPublisherManifest/EBookPublisher.xml): The manifest file for the PowerPoint add-in.  
+- [Adventure Works.ppt](https://github.com/OfficeDev/PowerPoint-Add-in-JavaScript-SliceDataChunks/blob/master/EBookPublisher/Adventure%20Works.pptx): Start Document with 1,024 slides. 
  
-**EBookPublisherWeb project**
+**EBookPublisherWeb** project
 
-- App/Home/Home.html. The HTML user interface that is displayed in the task pane. 
-- App/Home/Home.js. Logic that runs when the add-in is loaded. 
-
-All other files are automatically provided by the Visual Studio project template for Office Add-ins.
+- [App/Home/Home.html](https://github.com/OfficeDev/PowerPoint-Add-in-JavaScript-SliceDataChunks/blob/master/EBookPublisherWeb/App/Home/Home.html). The HTML user interface that is displayed in the task pane. 
+- [App/Home/Home.js](https://github.com/OfficeDev/PowerPoint-Add-in-JavaScript-SliceDataChunks/blob/master/EBookPublisherWeb/App/Home/Home.js). Logic that runs when the add-in is loaded. 
 
 
 <a name="codedescription"></a>
 ##Description of the code
-The Adventure Works.pptx file is set as the **StartAction** property of the task pane add-in. The document is large enough (500 pages) to be sliced into a number of discrete chunks of data. 
+The Adventure Works.pptx file is set as the **Start Document** property of the task pane add-in. The presentation is large enough (1,204 slides) to be sliced into a number of discrete chunks of data. 
 
 The sample demonstrates:
 
 - How to use JavaScript to retrieve the selected value from a drop-down list.
-- How to use the **getFileAsync** method to slice the file into chunks of data of varying sizes.
+- How to use the **getFileAsync** method to slice the file into chunks of data of particular sizes.
 - How to retrieve the data from each slice of the file by using the **getSliceAsync** method.
 
 
@@ -67,7 +65,7 @@ The add-in displays the number of slices and the size of each slice, along with 
 <a name="troubleshooting"></a>
 ## Troubleshooting
 
-- If the add-in starts with a blank presentation, ensure that the **StartAction** property of the EBookPublisher project is set to *Adventure Works.pptx* (not to *New PowerPoint Presentation*).
+- If the add-in starts with a blank presentation, ensure that the **Start Document** property of the EBookPublisher project is set to *Adventure Works.pptx* (not to *New PowerPoint Presentation*).
 - If the presentation opens in read-only mode, click the **Enable editing** button.
 - If the add-in does not appear in the task pane of the presentation, Choose **Insert > My Add-ins > EBook Publisher**.
 
@@ -75,7 +73,7 @@ The add-in displays the number of slices and the size of each slice, along with 
 <a name="questions"></a>
 ## Questions and comments
 
-- If you have any trouble running this sample, please [log an issue](https://github.com/OfficeDev/PowerPoint-Add-in-JavaScript-SliceDataChunks).
+- If you have any trouble running this sample, please [log an issue](https://github.com/OfficeDev/PowerPoint-Add-in-JavaScript-SliceDataChunks/issues).
 - Questions about Office Add-ins development in general should be posted to [Stack Overflow](http://stackoverflow.com/questions/tagged/office-addins). Make sure that your questions or comments are tagged with [office-addins].
 
 
