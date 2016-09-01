@@ -68,6 +68,11 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\OfficeThemes.css" />
+    <Content Include="Functions\FunctionFile.html" />
+    <Content Include="Functions\FunctionFile.js" />
+    <Content Include="Images\Button16x16.png" />
+    <Content Include="Images\Button32x32.png" />
+    <Content Include="Images\Button80x80.png" />
     <Content Include="packages.config" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
