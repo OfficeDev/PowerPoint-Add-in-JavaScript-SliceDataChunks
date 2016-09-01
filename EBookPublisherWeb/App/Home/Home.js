@@ -146,29 +146,25 @@
 // It shows the raw data for the appropriate Slice object in a jQuery dialog
 function showChunk(dataChunk) {
     // The first thing to do is ensure some CSS that we want to use to style the dialog is added to the page.
+
     // The reason we didn't do this at design time is that if the user never clicks a button, then we would
-    // have unnecessarily added to the document payload.
-    // So we will do this dynamically. Plus, it might be generally good learning for you to see how to
-    // dynamically add styles to a Web page by using JavaScript.
-    // NOTE: The href value we use below points to a custom CSS file that we have added to the Content folder
-    // and this CSS file includes styles that use images in the Content\Images folder
+    // have unnecessarily added to the document payload. So we will do this dynamically. 
     var head = document.getElementsByTagName('head')[0];
     var dialogStyleSheet = document.createElement('link');
     dialogStyleSheet.rel = 'stylesheet'
     dialogStyleSheet.type = 'text/css';
-    dialogStyleSheet.href = 'https://code.jquery.com/ui/1.9.1/themes/smoothness/jquery-ui.css';
+    dialogStyleSheet.href = 'https://code.jquery.com/ui/1.12.0/themes/smoothness/jquery-ui.css';
     head.appendChild(dialogStyleSheet);
 
     // Although we already have references provided by the Visual Studio template to jQuery files,
     // they don't include functionality for showing jQuery dialogs. So we'll load a jQuery script
-    // that can deal with dialogs here. Again, it might be generally good learning for you to see how to
-    // dynamically add additional scripts to a Web page by using JavaScript.
-    // NOTE: The src value we use below points to a custom JavaScript file that we have added to the Scripts folder.
-    // It's this file that contains the functionality for creating and destroying dialogs.
+    // that can deal with dialogs here. 
     var dialogScriptUI = document.createElement('script');
     dialogScriptUI.type = 'text/javascript';
-    dialogScriptUI.src = 'https://code.jquery.com/ui/1.9.1/jquery-ui.min.js';
+    dialogScriptUI.src = 'https://code.jquery.com/ui/1.12.0/jquery-ui.min.js';
     head.appendChild(dialogScriptUI);
+
+ 
 
     // It might take a small delay before the jQuery we need is loaded, so we'll put in a delay
     // We don't want to try and reference the
