@@ -14,18 +14,25 @@
             app.initialize();
 
             $('#sendData').click(function () { transmitChunk(); });
+
+            $("#showChunkDialog").dialog({
+                modal: true,
+                open: function () {
+                    $(document.body).css({ 'cursor': 'default' });
+                },
+                autoOpen: false
+            });
         });
     };
 
     function transmitChunk() {
-
         // Get a reference to the <DIV> where we will write the outcome of our operation
-        var report = document.getElementById("transmissionReport");
+        var report = document.getElementById('transmissionReport');
 
         // Get the selected value in the drop-down. We will use this value as a parameter
         // in the getFileAsync method. NOTE: The display values in the drop-down are shown in MB,
         // but the actual value returned is in Bytes (see the HTML for the drop-down in PowerPointEBookPublisher.html)
-        var chunksize = document.getElementById("chunkSize").value;
+        var chunksize = document.getElementById('chunkSize').value;
 
         // Initialize the variable that we will use to store the number of slices returned
         // by the getFileAsync method
@@ -46,14 +53,13 @@
         // When the method returns, the function that is provided as the third parameter will run.
         Office.context.document.getFileAsync(Office.FileType.Compressed, { sliceSize: parseInt(chunksize) }, function (result) {
             if (result.status == "succeeded") {
-
                 // If the getFileAsync call succeeded, then
                 // result.value will return a valid File object, which we'll
                 // hold in the currentFile variable.
                 var currentFile = result.value;
 
                 // Now we can start accessing the properties of the returned File object.
-                // First, we'll create a <DIV> and tell the user how big the file is (in MB). The size property is actually 
+                // First, we'll create a <DIV> and tell the user how big the file is (in MB). The size property is actually
                 // returned in Bytes, so we first need to convert that to MB, and then use that value in our own function
                 // called trimSize which simply ensures the value is returned to two decimal places. Otherwise we could be displaying
                 // values such as 3.83872637 (which is not very tidy :-)
@@ -71,13 +77,11 @@
 
                 // Now we'll actually do something with each slide
                 for (var slice = 0; slice < totalSlices; slice++) {
-
                     // We'll call the getSliceAsync method of the File object, and pass in the
-                    // integer in the above 'for' loop as the first paramter. This is simply an index
-                    // which indicates which slice to get 
+                    // integer in the above 'for' loop as the first parameter. This is simply an index
+                    // which indicates which slice to get
                     var currentSlice = currentFile.getSliceAsync(slice, function (result) {
                         if (result.status == "succeeded") {
-
                             // If the getSliceAsync call succeeded, then
                             // result.value will return a valid Slice object, from which we'll
                             // access various properties.
@@ -88,8 +92,8 @@
                             var encData = btoa(result.value.data);
 
                             // The next thing we'll do is get the slice size and report it to the user.
-                            // In this case, we're retrieving the 'size' in Bytes, so we first need to convert that to KB, 
-                            // and then use that value in our own function called trimSize which simply ensures the value is 
+                            // In this case, we're retrieving the 'size' in Bytes, so we first need to convert that to KB,
+                            // and then use that value in our own function called trimSize which simply ensures the value is
                             // returned to two decimal places. Otherwise we could be displaying
                             // values such as 243.83872637 (which is not very tidy :-)
                             // We're also retrieving the index value of the slice, so that we can display the following pattern
@@ -144,79 +148,14 @@
                 app.showNotification("Error", result.error.message);
         });
     }
-
 })();
 
 // This function handles the Click events of the buttons we've added in the transmitChunk function above.
 // It shows the raw data for the appropriate Slice object in a jQuery dialog
 function showChunk(dataChunk) {
-
-    // The first thing to do is ensure some CSS that we want to use to style the dialog is added to the page.
-    // The reason we didn't do this at design time is that if the user never clicks a button, then we would
-    // have unnecessarily added to the document payload.
-    // So we will do this dynamically. Plus, it might be generally good learning for you to see how to 
-    // dynamically add styles to a Web page by using JavaScript.
-    // NOTE: The href value we use below points to a custom CSS file that we have added to the Content folder
-    // and this CSS file includes styles that use images in the Content\Images folder
-    var head = document.getElementsByTagName('head')[0];
-    var dialogStyleSheet = document.createElement('link');
-    dialogStyleSheet.rel = 'stylesheet'
-    dialogStyleSheet.type = 'text/css';
-    dialogStyleSheet.href = 'https://code.jquery.com/ui/1.9.1/themes/smoothness/jquery-ui.css';
-    head.appendChild(dialogStyleSheet);
-
-    // Although we already have references provided by the Visual Studio template to jQuery files,
-    // they don't include functionality for showing jQuery dialogs. So we'll load a jQuery script
-    // that can deal with dialogs here. Again, it might be generally good learning for you to see how to 
-    // dynamically add additional scripts to a Web page by using JavaScript.
-    // NOTE: The src value we use below points to a custom JavaScript file that we have added to the Scripts folder.
-    // It's this file that contains the functionality for creating and destroying dialogs.
-    var dialogScriptUI = document.createElement('script');
-    dialogScriptUI.type = 'text/javascript';
-    dialogScriptUI.src = 'https://code.jquery.com/ui/1.9.1/jquery-ui.min.js';
-    head.appendChild(dialogScriptUI);
-
-    // It might take a small delay before the jQuery we need is loaded, so we'll put in a delay
-    // We don't want to try and reference the 
-    // script before it is actually loaded. We store the interval in the variable, and set up 
-    // this interval for 300 milliseconds. So this will keep running until our jQuery has been 
-    // loaded, and then we can clear the interval so it doesn't keep running. 
-    interval = self.setInterval(function () {
-
-        // Check to see if dialog method has loaded. 
-        // NOTE: #showChunkDialog might not exist at this point, but that's OK. We're really testing
-        // the .dialog() method at this point.
-        if ($("#showChunkDialog").dialog()) {
-
-            // If the above test succeeds, then we know we can show dialogs! 
-            // So we'll clear the interval to stop it firing repeatedly
-            window.clearInterval(interval);
-
-            // If the showChunkDialog element exists, either from a previous click, or by the test above, 
-            // then we'll remove it 
-            if ($("#showChunkDialog").length > 0) {
-                $("#showChunkDialog").remove();
-            }
-
-            // Now we can create a real <DIV> element in the body, which we will use for our dialog.
-            // NOTE: This is where we actually create the #showChunkDialog. It simply displays the dataChunk
-            // parameter that was passed in to this handler.
-            $(document.getElementsByTagName('body')[0]).append
-                ("<div id='showChunkDialog' title='Chunk Data' style='word-wrap:break-word;width:200px;height:200px;max-height:200px;overflow:auto;'>"
-                + dataChunk
-                + "</div>");
-
-            // Register the newly created div as a dialog, which shows it to the user with the options specified. 
-            $("#showChunkDialog").dialog({ position: [10, 75], minHeight: 200, minWidth: 200, maxHeight: 200, maxWidth: 200, modal: true, resizable: false, close: closeDialog });
-        }
-    }, 300);
-}
-
-// The showChunk function above shows a jQuery dialog, and when the close button in the dialog is clicked
-// the following function is run. It simply removes the <DIV> that represents the dialog, and the effect is that
-// the dialog appears closed.
-function closeDialog(sender) {
-    $("#showChunkDialog").remove();
+    $(document.body).css({ 'cursor': 'wait' });
+    $("#showChunkDialog").html(dataChunk);
+    $("#showChunkDialog").dialog("open");
 }
 
 // Very simple function for taking a string that looks like a number with potentially many decimal places
@@ -253,13 +192,12 @@ function trimSize(fileSize) {
     // We'll simply trim the digits past the second decimal place.
     // In a real solution you might like to determine whether the second decimal place
     // should be rounded up, depending on the value of the third decimal place, but this is not really
-    // the point of this sample. Simple trimming is fine for us as we're just displaying information to 
+    // the point of this sample. Simple trimming is fine for us as we're just displaying information to
     // the user about approximate file sizes :-)
     if ((stringLength - periodPosition) >= 3) {
         return (fileSize.toString().substring(0, periodPosition + 3));
     }
 }
-
 
 // *********************************************************
 //
