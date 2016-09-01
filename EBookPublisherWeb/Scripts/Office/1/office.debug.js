@@ -1,17 +1,62 @@
 /* Office JavaScript API library */
-/* Version: 16.0.4011.1000 */
+/* Version: 16.0.7111.3002 */
 /*
 	Copyright (c) Microsoft Corporation.  All rights reserved.
 */
+
 
 /*
 	Your use of this file is governed by the Microsoft Services Agreement http://go.microsoft.com/fwlink/?LinkId=266419.
 */
 
 var OSF = OSF || {};
-
-OSF.HostSpecificFileVersion = "16.00";
-
+OSF.HostSpecificFileVersionDefault = "16.00";
+OSF.HostSpecificFileVersionMap = {
+    "access": {
+        "web": "16.00"
+    },
+    "agavito": {
+        "winrt": "16.00"
+    },
+    "excel": {
+        "ios": "16.00",
+        "mac": "16.00",
+        "web": "16.00",
+        "win32": "16.01",
+        "winrt": "16.00"
+    },
+    "onenote": {
+        "web": "16.00",
+        "win32": "16.00",
+        "winrt": "16.00"
+    },
+    "outlook": {
+        "ios": "16.00",
+        "mac": "16.00",
+        "web": "16.01",
+        "win32": "16.00"
+    },
+    "powerpoint": {
+        "ios": "16.00",
+        "mac": "16.00",
+        "web": "16.00",
+        "win32": "16.01",
+        "winrt": "16.00"
+    },
+    "project": {
+        "win32": "16.00"
+    },
+    "sway": {
+        "web": "16.00"
+    },
+    "word": {
+        "ios": "16.00",
+        "mac": "16.00",
+        "web": "16.00",
+        "win32": "16.01",
+        "winrt": "16.00"
+    }
+};
 OSF.SupportedLocales = {
     "ar-sa": true,
     "bg-bg": true,
@@ -60,7 +105,6 @@ OSF.SupportedLocales = {
     "zh-cn": true,
     "zh-tw": true
 };
-
 OSF.AssociatedLocales = {
     ar: "ar-sa",
     bg: "bg-bg",
@@ -104,24 +148,332 @@ OSF.AssociatedLocales = {
     vi: "vi-vn",
     zh: "zh-cn"
 };
+OSF.getSupportedLocale = function OSF$getSupportedLocale(locale, defaultLocale) {
+    if (defaultLocale === void 0) { defaultLocale = "en-us"; }
+    if (!locale) {
+        return defaultLocale;
+    }
+    var supportedLocale;
+    locale = locale.toLowerCase();
+    if (locale in OSF.SupportedLocales) {
+        supportedLocale = locale;
+    }
+    else {
+        var localeParts = locale.split('-', 1);
+        if (localeParts && localeParts.length > 0) {
+            supportedLocale = OSF.AssociatedLocales[localeParts[0]];
+        }
+    }
+    if (!supportedLocale) {
+        supportedLocale = defaultLocale;
+    }
+    return supportedLocale;
+};
+var ScriptLoading;
+(function (ScriptLoading) {
+    var ScriptInfo = (function () {
+        function ScriptInfo(url, isReady, hasStarted, timer, pendingCallback) {
+            this.url = url;
+            this.isReady = isReady;
+            this.hasStarted = hasStarted;
+            this.timer = timer;
+            this.hasError = false;
+            this.pendingCallbacks = [];
+            this.pendingCallbacks.push(pendingCallback);
+        }
+        return ScriptInfo;
+    })();
+    var ScriptTelemetry = (function () {
+        function ScriptTelemetry(scriptId, startTime, msResponseTime) {
+            this.scriptId = scriptId;
+            this.startTime = startTime;
+            this.msResponseTime = msResponseTime;
+        }
+        return ScriptTelemetry;
+    })();
+    var LoadScriptHelper = (function () {
+        function LoadScriptHelper() {
+            this.defaultScriptLoadingTimeout = 10000;
+            this.loadedScriptByIds = {};
+            this.scriptTelemetryBuffer = [];
+            this.osfControlAppCorrelationId = "";
+            this.basePath = null;
+            this.constantNames = {
+                OfficeJS: "office.js",
+                OfficeDebugJS: "office.debug.js"
+            };
+        }
+        LoadScriptHelper.prototype.isScriptLoading = function (id) {
+            return !!(this.loadedScriptByIds[id] && this.loadedScriptByIds[id].hasStarted);
+        };
+        LoadScriptHelper.prototype.getOfficeJsBasePath = function () {
+            if (this.basePath) {
+                return this.basePath;
+            }
+            else {
+                var getScriptBase = function (scriptSrc, scriptNameToCheck) {
+                    var scriptBase, indexOfJS, scriptSrcLowerCase;
+                    scriptSrcLowerCase = scriptSrc.toLowerCase();
+                    indexOfJS = scriptSrcLowerCase.indexOf(scriptNameToCheck);
+                    if (indexOfJS >= 0 && indexOfJS === (scriptSrc.length - scriptNameToCheck.length) && (indexOfJS === 0 || scriptSrc.charAt(indexOfJS - 1) === '/' || scriptSrc.charAt(indexOfJS - 1) === '\\')) {
+                        scriptBase = scriptSrc.substring(0, indexOfJS);
+                    }
+                    return scriptBase;
+                };
+                var scripts = document.getElementsByTagName("script");
+                var scriptsCount = scripts.length;
+                var officeScripts = [this.constantNames.OfficeJS, this.constantNames.OfficeDebugJS];
+                var officeScriptsCount = officeScripts.length;
+                var i, j;
+                for (i = 0; !this.basePath && i < scriptsCount; i++) {
+                    if (scripts[i].src) {
+                        for (j = 0; !this.basePath && j < officeScriptsCount; j++) {
+                            this.basePath = getScriptBase(scripts[i].src, officeScripts[j]);
+                        }
+                    }
+                }
+                return this.basePath;
+            }
+        };
+        LoadScriptHelper.prototype.loadScript = function (url, scriptId, callback, highPriority, timeoutInMs) {
+            this.loadScriptInternal(url, scriptId, callback, highPriority, timeoutInMs);
+        };
+        LoadScriptHelper.prototype.loadScriptParallel = function (url, scriptId, timeoutInMs) {
+            this.loadScriptInternal(url, scriptId, null, false, timeoutInMs);
+        };
+        LoadScriptHelper.prototype.waitForFunction = function (scriptLoadTest, callback, numberOfTries, delay) {
+            var attemptsRemaining = numberOfTries;
+            var timerId;
+            var validateFunction = function () {
+                attemptsRemaining--;
+                if (scriptLoadTest()) {
+                    callback(true);
+                    return;
+                }
+                else if (attemptsRemaining > 0) {
+                    timerId = window.setTimeout(validateFunction, delay);
+                    attemptsRemaining--;
+                }
+                else {
+                    window.clearTimeout(timerId);
+                    callback(false);
+                }
+            };
+            validateFunction();
+        };
+        LoadScriptHelper.prototype.waitForScripts = function (ids, callback) {
+            var _this = this;
+            if (this.invokeCallbackIfScriptsReady(ids, callback) == false) {
+                for (var i = 0; i < ids.length; i++) {
+                    var id = ids[i];
+                    var loadedScriptEntry = this.loadedScriptByIds[id];
+                    if (loadedScriptEntry) {
+                        loadedScriptEntry.pendingCallbacks.push(function () {
+                            _this.invokeCallbackIfScriptsReady(ids, callback);
+                        });
+                    }
+                }
+            }
+        };
+        LoadScriptHelper.prototype.logScriptLoading = function (scriptId, startTime, msResponseTime) {
+            startTime = Math.floor(startTime);
+            if (OSF.AppTelemetry && OSF.AppTelemetry.onScriptDone) {
+                if (OSF.AppTelemetry.onScriptDone.length == 3) {
+                    OSF.AppTelemetry.onScriptDone(scriptId, startTime, msResponseTime);
+                }
+                else {
+                    OSF.AppTelemetry.onScriptDone(scriptId, startTime, msResponseTime, this.osfControlAppCorrelationId);
+                }
+            }
+            else {
+                var scriptTelemetry = new ScriptTelemetry(scriptId, startTime, msResponseTime);
+                this.scriptTelemetryBuffer.push(scriptTelemetry);
+            }
+        };
+        LoadScriptHelper.prototype.setAppCorrelationId = function (appCorrelationId) {
+            this.osfControlAppCorrelationId = appCorrelationId;
+        };
+        LoadScriptHelper.prototype.invokeCallbackIfScriptsReady = function (ids, callback) {
+            var hasError = false;
+            for (var i = 0; i < ids.length; i++) {
+                var id = ids[i];
+                var loadedScriptEntry = this.loadedScriptByIds[id];
+                if (!loadedScriptEntry) {
+                    loadedScriptEntry = new ScriptInfo("", false, false, null, null);
+                    this.loadedScriptByIds[id] = loadedScriptEntry;
+                }
+                if (loadedScriptEntry.isReady == false) {
+                    return false;
+                }
+                else if (loadedScriptEntry.hasError) {
+                    hasError = true;
+                }
+            }
+            callback(!hasError);
+            return true;
+        };
+        LoadScriptHelper.prototype.getScriptEntryByUrl = function (url) {
+            for (var key in this.loadedScriptByIds) {
+                var scriptEntry = this.loadedScriptByIds[key];
+                if (this.loadedScriptByIds.hasOwnProperty(key) && scriptEntry.url === url) {
+                    return scriptEntry;
+                }
+            }
+            return null;
+        };
+        LoadScriptHelper.prototype.loadScriptInternal = function (url, scriptId, callback, highPriority, timeoutInMs) {
+            if (url) {
+                var self = this;
+                var doc = window.document;
+                var loadedScriptEntry = (scriptId && this.loadedScriptByIds[scriptId]) ? this.loadedScriptByIds[scriptId] : this.getScriptEntryByUrl(url);
+                if (!loadedScriptEntry || loadedScriptEntry.hasError || loadedScriptEntry.url.toLowerCase() != url.toLowerCase()) {
+                    var script = doc.createElement("script");
+                    script.type = "text/javascript";
+                    if (scriptId) {
+                        script.id = scriptId;
+                    }
+                    if (!loadedScriptEntry) {
+                        loadedScriptEntry = new ScriptInfo(url, false, false, null, null);
+                        this.loadedScriptByIds[(scriptId ? scriptId : url)] = loadedScriptEntry;
+                    }
+                    else {
+                        loadedScriptEntry.url = url;
+                        loadedScriptEntry.hasError = false;
+                        loadedScriptEntry.isReady = false;
+                    }
+                    if (callback) {
+                        if (highPriority) {
+                            loadedScriptEntry.pendingCallbacks.unshift(callback);
+                        }
+                        else {
+                            loadedScriptEntry.pendingCallbacks.push(callback);
+                        }
+                    }
+                    var timeFromPageInit = -1;
+                    if (window.performance && window.performance.now) {
+                        timeFromPageInit = window.performance.now();
+                    }
+                    var startTime = (new Date()).getTime();
+                    var logTelemetry = function (succeeded) {
+                        if (scriptId) {
+                            var totalTime = (new Date()).getTime() - startTime;
+                            if (!succeeded) {
+                                totalTime = -totalTime;
+                            }
+                            self.logScriptLoading(scriptId, timeFromPageInit, totalTime);
+                        }
+                        self.flushTelemetryBuffer();
+                    };
+                    var onLoadCallback = function OSF_OUtil_loadScript$onLoadCallback() {
+                        logTelemetry(true);
+                        loadedScriptEntry.isReady = true;
+                        if (loadedScriptEntry.timer != null) {
+                            clearTimeout(loadedScriptEntry.timer);
+                            delete loadedScriptEntry.timer;
+                        }
+                        var pendingCallbackCount = loadedScriptEntry.pendingCallbacks.length;
+                        for (var i = 0; i < pendingCallbackCount; i++) {
+                            var currentCallback = loadedScriptEntry.pendingCallbacks.shift();
+                            if (currentCallback) {
+                                var result = currentCallback(true);
+                                if (result === false) {
+                                    break;
+                                }
+                            }
+                        }
+                    };
+                    var onLoadError = function () {
+                        logTelemetry(false);
+                        loadedScriptEntry.hasError = true;
+                        loadedScriptEntry.isReady = true;
+                        if (loadedScriptEntry.timer != null) {
+                            clearTimeout(loadedScriptEntry.timer);
+                            delete loadedScriptEntry.timer;
+                        }
+                        var pendingCallbackCount = loadedScriptEntry.pendingCallbacks.length;
+                        for (var i = 0; i < pendingCallbackCount; i++) {
+                            var currentCallback = loadedScriptEntry.pendingCallbacks.shift();
+                            if (currentCallback) {
+                                var result = currentCallback(false);
+                                if (result === false) {
+                                    break;
+                                }
+                            }
+                        }
+                    };
+                    if (script.readyState) {
+                        script.onreadystatechange = function () {
+                            if (script.readyState == "loaded" || script.readyState == "complete") {
+                                script.onreadystatechange = null;
+                                onLoadCallback();
+                            }
+                        };
+                    }
+                    else {
+                        script.onload = onLoadCallback;
+                    }
+                    script.onerror = onLoadError;
+                    timeoutInMs = timeoutInMs || this.defaultScriptLoadingTimeout;
+                    loadedScriptEntry.timer = setTimeout(onLoadError, timeoutInMs);
+                    loadedScriptEntry.hasStarted = true;
+                    script.src = url;
+                    doc.getElementsByTagName("head")[0].appendChild(script);
+                }
+                else if (loadedScriptEntry.isReady) {
+                    callback(true);
+                }
+                else {
+                    if (highPriority) {
+                        loadedScriptEntry.pendingCallbacks.unshift(callback);
+                    }
+                    else {
+                        loadedScriptEntry.pendingCallbacks.push(callback);
+                    }
+                }
+            }
+        };
+        LoadScriptHelper.prototype.flushTelemetryBuffer = function () {
+            if (OSF.AppTelemetry && OSF.AppTelemetry.onScriptDone) {
+                for (var i = 0; i < this.scriptTelemetryBuffer.length; i++) {
+                    var scriptTelemetry = this.scriptTelemetryBuffer[i];
+                    if (OSF.AppTelemetry.onScriptDone.length == 3) {
+                        OSF.AppTelemetry.onScriptDone(scriptTelemetry.scriptId, scriptTelemetry.startTime, scriptTelemetry.msResponseTime);
+                    }
+                    else {
+                        OSF.AppTelemetry.onScriptDone(scriptTelemetry.scriptId, scriptTelemetry.startTime, scriptTelemetry.msResponseTime, this.osfControlAppCorrelationId);
+                    }
+                }
+                this.scriptTelemetryBuffer = [];
+            }
+        };
+        return LoadScriptHelper;
+    })();
+    ScriptLoading.LoadScriptHelper = LoadScriptHelper;
+})(ScriptLoading || (ScriptLoading = {}));
 OSF.ConstantNames = {
-    HostSpecificFallbackVersion: OSF.HostSpecificFileVersion,
+    FileVersion: "OAssemblyFileVer",
     OfficeJS: "office.js",
     OfficeDebugJS: "office.debug.js",
     DefaultLocale: "en-us",
-    LocaleStringLoadingTimeout: 2000,
+    LocaleStringLoadingTimeout: 5000,
+    MicrosoftAjaxId: "MSAJAX",
+    OfficeStringsId: "OFFICESTRINGS",
+    OfficeJsId: "OFFICEJS",
+    HostFileId: "HOST",
+    O15MappingId: "O15Mapping",
     OfficeStringJS: "office_strings.debug.js",
     O15InitHelper: "o15apptofilemappingtable.debug.js",
     SupportedLocales: OSF.SupportedLocales,
     AssociatedLocales: OSF.AssociatedLocales
 };
-
 OSF.InitializationHelper = function OSF_InitializationHelper(hostInfo, webAppState, context, settings, hostFacade) {
     this._hostInfo = hostInfo;
     this._webAppState = webAppState;
     this._context = context;
     this._settings = settings;
     this._hostFacade = hostFacade;
+};
+OSF.InitializationHelper.prototype.saveAndSetDialogInfo = function OSF_InitializationHelper$saveAndSetDialogInfo(hostInfoValue) {
 };
 OSF.InitializationHelper.prototype.getAppContext = function OSF_InitializationHelper$getAppContext(wnd, gotAppContext) {
 };
@@ -131,7 +483,8 @@ OSF.InitializationHelper.prototype.prepareRightBeforeWebExtensionInitialize = fu
 };
 OSF.InitializationHelper.prototype.loadAppSpecificScriptAndCreateOM = function OSF_InitializationHelper$loadAppSpecificScriptAndCreateOM(appContext, appReady, basePath) {
 };
-
+OSF.InitializationHelper.prototype.prepareRightAfterWebExtensionInitialize = function OSF_InitializationHelper$prepareRightAfterWebExtensionInitialize() {
+};
 OSF._OfficeAppFactory = (function OSF__OfficeAppFactory() {
     var _setNamespace = function OSF_OUtil$_setNamespace(name, parent) {
         if (parent && name && !parent[name]) {
@@ -147,20 +500,23 @@ OSF._OfficeAppFactory = (function OSF__OfficeAppFactory() {
     var _settings = {};
     var _hostFacade = {};
     var _WebAppState = { id: null, webAppUrl: null, conversationID: null, clientEndPoint: null, wnd: window.parent, focused: false };
-    var _hostInfo = { isO15: true, isRichClient: true, hostType: "", hostPlatform: "", hostSpecificFileVersion: "" };
+    var _hostInfo = { isO15: true, isRichClient: true, hostType: "", hostPlatform: "", hostSpecificFileVersion: "", hostLocale: "", osfControlAppCorrelationId: "", isDialog: false };
     var _initializationHelper = {};
     var _appInstanceId = null;
-
+    var _loadScriptHelper = new ScriptLoading.LoadScriptHelper();
+    if (window.performance && window.performance.now) {
+        _loadScriptHelper.logScriptLoading(OSF.ConstantNames.OfficeJsId, -1, window.performance.now());
+    }
     var _windowLocationHash = window.location.hash;
-    var _parseHostInfo = function OSF__OfficeAppFactory$_parseHostInfo() {
+    var _windowLocationSearch = window.location.search;
+    var getQueryStringValue = function OSF__OfficeAppFactory$getQueryStringValue(paramName) {
         var hostInfoValue;
-        var hostInfo = "_host_Info=";
         var searchString = window.location.search;
         if (searchString) {
-            var hostInfoParts = searchString.split(hostInfo);
+            var hostInfoParts = searchString.split(paramName + "=");
             if (hostInfoParts.length > 1) {
                 var hostInfoValueRestString = hostInfoParts[1];
-                var separatorRegex = new RegExp("/[&#]/g");
+                var separatorRegex = new RegExp("[&#]", "g");
                 var hostInfoValueParts = hostInfoValueRestString.split(separatorRegex);
                 if (hostInfoValueParts.length > 0) {
                     hostInfoValue = hostInfoValueParts[0];
@@ -169,73 +525,40 @@ OSF._OfficeAppFactory = (function OSF__OfficeAppFactory() {
         }
         return hostInfoValue;
     };
-    var _loadScript = function OSF_OUtil$_loadScript(url, callback, timeoutInMs) {
-        var loadedScripts = {};
-        var defaultScriptLoadingTimeout = 30000;
-        if (url && callback) {
-            var doc = window.document;
-            var loadedScriptEntry = loadedScripts[url];
-            if (!loadedScriptEntry) {
-                var script = doc.createElement("script");
-                script.type = "text/javascript";
-                loadedScriptEntry = { loaded: false, pendingCallbacks: [callback], timer: null };
-                loadedScripts[url] = loadedScriptEntry;
-                var onLoadCallback = function OSF_OUtil_loadScript$onLoadCallback() {
-                    if (loadedScriptEntry.timer != null) {
-                        clearTimeout(loadedScriptEntry.timer);
-                        delete loadedScriptEntry.timer;
-                    }
-                    loadedScriptEntry.loaded = true;
-                    var pendingCallbackCount = loadedScriptEntry.pendingCallbacks.length;
-                    for (var i = 0; i < pendingCallbackCount; i++) {
-                        var currentCallback = loadedScriptEntry.pendingCallbacks.shift();
-                        currentCallback();
-                    }
-                };
-                var onLoadError = function OSF_OUtil_loadScript$onLoadError() {
-                    delete loadedScripts[url];
-                    if (loadedScriptEntry.timer != null) {
-                        clearTimeout(loadedScriptEntry.timer);
-                        delete loadedScriptEntry.timer;
-                    }
-                    var pendingCallbackCount = loadedScriptEntry.pendingCallbacks.length;
-                    for (var i = 0; i < pendingCallbackCount; i++) {
-                        var currentCallback = loadedScriptEntry.pendingCallbacks.shift();
-                        currentCallback();
-                    }
-                };
-                if (script.readyState) {
-                    script.onreadystatechange = function () {
-                        if (script.readyState == "loaded" || script.readyState == "complete") {
-                            script.onreadystatechange = null;
-                            onLoadCallback();
-                        }
-                    };
-                } else {
-                    script.onload = onLoadCallback;
+    var _retrieveHostInfo = function OSF__OfficeAppFactory$_retrieveHostInfo() {
+        var hostInfoParaName = "_host_Info";
+        var hostInfoValue = getQueryStringValue(hostInfoParaName);
+        if (!hostInfoValue) {
+            try {
+                var fallbackHostInfo = window.external.GetHostInfo();
+                if (fallbackHostInfo == "isDialog") {
+                    _hostInfo.isO15 = true;
+                    _hostInfo.isDialog = true;
                 }
-                script.onerror = onLoadError;
-
-                timeoutInMs = timeoutInMs || defaultScriptLoadingTimeout;
-                loadedScriptEntry.timer = setTimeout(onLoadError, timeoutInMs);
-                script.src = url;
-                doc.getElementsByTagName("head")[0].appendChild(script);
-            } else if (loadedScriptEntry.loaded) {
-                callback();
-            } else {
-                loadedScriptEntry.pendingCallbacks.push(callback);
+                else if (fallbackHostInfo.toLowerCase().indexOf("mac") !== -1 && fallbackHostInfo.toLowerCase().indexOf("outlook") !== -1) {
+                    _hostInfo.isO15 = true;
+                }
+                else {
+                    var hostInfoParts = fallbackHostInfo.split(hostInfoParaName + "=");
+                    if (hostInfoParts.length > 1) {
+                        hostInfoValue = hostInfoParts[1];
+                    }
+                    else {
+                        hostInfoValue = fallbackHostInfo;
+                    }
+                }
+            }
+            catch (Exception) {
             }
         }
-    };
-    var _retrieveHostInfo = function OSF__OfficeAppFactory$_retrieveHostInfo() {
-        var hostInfoValue = _parseHostInfo();
         var getSessionStorage = function OSF__OfficeAppFactory$_retrieveHostInfo$getSessionStorage() {
             var osfSessionStorage = null;
-            try  {
+            try {
                 if (window.sessionStorage) {
                     osfSessionStorage = window.sessionStorage;
                 }
-            } catch (ex) {
+            }
+            catch (ex) {
             }
             return osfSessionStorage;
         };
@@ -244,135 +567,191 @@ OSF._OfficeAppFactory = (function OSF__OfficeAppFactory() {
             hostInfoValue = osfSessionStorage.getItem("hostInfoValue");
         }
         if (hostInfoValue) {
+            hostInfoValue = decodeURIComponent(hostInfoValue);
             _hostInfo.isO15 = false;
             var items = hostInfoValue.split("$");
             if (typeof items[2] == "undefined") {
                 items = hostInfoValue.split("|");
             }
-            _hostInfo.hostType = items[0];
-            _hostInfo.hostPlatform = items[1];
-            _hostInfo.hostSpecificFileVersion = items[2];
+            _hostInfo.hostType = (typeof items[0] == "undefined") ? "" : items[0].toLowerCase();
+            _hostInfo.hostPlatform = (typeof items[1] == "undefined") ? "" : items[1].toLowerCase();
+            ;
+            _hostInfo.hostSpecificFileVersion = (typeof items[2] == "undefined") ? "" : items[2].toLowerCase();
+            _hostInfo.hostLocale = (typeof items[3] == "undefined") ? "" : items[3].toLowerCase();
+            _hostInfo.osfControlAppCorrelationId = (typeof items[4] == "undefined") ? "" : items[4];
+            if (_hostInfo.osfControlAppCorrelationId == "telemetry") {
+                _hostInfo.osfControlAppCorrelationId = "";
+            }
+            _hostInfo.isDialog = (((typeof items[5]) != "undefined") && items[5] == "isDialog") ? true : false;
             var hostSpecificFileVersionValue = parseFloat(_hostInfo.hostSpecificFileVersion);
-
-            if (hostSpecificFileVersionValue > OSF.ConstantNames.HostSpecificFallbackVersion) {
-                _hostInfo.hostSpecificFileVersion = OSF.ConstantNames.HostSpecificFallbackVersion.toString();
+            var fallbackVersion = OSF.HostSpecificFileVersionDefault;
+            if (OSF.HostSpecificFileVersionMap[_hostInfo.hostType] && OSF.HostSpecificFileVersionMap[_hostInfo.hostType][_hostInfo.hostPlatform]) {
+                fallbackVersion = OSF.HostSpecificFileVersionMap[_hostInfo.hostType][_hostInfo.hostPlatform];
+            }
+            if (hostSpecificFileVersionValue > parseFloat(fallbackVersion)) {
+                _hostInfo.hostSpecificFileVersion = fallbackVersion;
             }
             if (osfSessionStorage) {
-                try  {
+                try {
                     osfSessionStorage.setItem("hostInfoValue", hostInfoValue);
-                } catch (e) {
+                }
+                catch (e) {
                 }
             }
-        } else {
+        }
+        else {
             _hostInfo.isO15 = true;
+            _hostInfo.hostLocale = getQueryStringValue("locale");
         }
     };
     var getAppContextAsync = function OSF__OfficeAppFactory$getAppContextAsync(wnd, gotAppContext) {
+        if (OSF.AppTelemetry && OSF.AppTelemetry.logAppCommonMessage) {
+            OSF.AppTelemetry.logAppCommonMessage("getAppContextAsync starts");
+        }
         _initializationHelper.getAppContext(wnd, gotAppContext);
     };
     var initialize = function OSF__OfficeAppFactory$initialize() {
         _retrieveHostInfo();
-        var getScriptBase = function OSF__OfficeAppFactory_initialize$getScriptBase(scriptSrc, scriptNameToCheck) {
-            var scriptBase, indexOfJS, scriptSrcLowerCase;
-            scriptSrcLowerCase = scriptSrc.toLowerCase();
-            indexOfJS = scriptSrcLowerCase.indexOf(scriptNameToCheck);
-            if (indexOfJS >= 0 && indexOfJS === (scriptSrc.length - scriptNameToCheck.length) && (indexOfJS === 0 || scriptSrc.charAt(indexOfJS - 1) === '/' || scriptSrc.charAt(indexOfJS - 1) === '\\')) {
-                scriptBase = scriptSrc.substring(0, indexOfJS);
-            }
-            return scriptBase;
-        };
-        var scripts = document.getElementsByTagName("script");
-        var scriptsCount = scripts.length;
-        var officeScripts = [OSF.ConstantNames.OfficeJS, OSF.ConstantNames.OfficeDebugJS];
-        var officeScriptsCount = officeScripts.length;
-        var i, j, basePath;
-        for (i = 0; !basePath && i < scriptsCount; i++) {
-            if (scripts[i].src) {
-                for (j = 0; !basePath && j < officeScriptsCount; j++) {
-                    basePath = getScriptBase(scripts[i].src, officeScripts[j]);
-                }
-            }
-        }
+        _loadScriptHelper.setAppCorrelationId(_hostInfo.osfControlAppCorrelationId);
+        var basePath = _loadScriptHelper.getOfficeJsBasePath();
+        var requiresMsAjax = false;
         if (!basePath)
             throw "Office Web Extension script library file name should be " + OSF.ConstantNames.OfficeJS + " or " + OSF.ConstantNames.OfficeDebugJS + ".";
-        var numberOfTimeForMsAjaxTries = 500;
-        var timerId;
-        var loadLocaleStringsAndAppSpecificCode = function OSF__OfficeAppFactory_initialize$loadLocaleStringsAndAppSpecificCode() {
-            if (typeof (Sys) !== 'undefined' && typeof (Type) !== 'undefined' && Sys.StringBuilder && typeof (Sys.StringBuilder) === "function" && Type.registerNamespace && typeof (Type.registerNamespace) === "function" && Type.registerClass && typeof (Type.registerClass) === "function") {
+        var isMicrosftAjaxLoaded = function OSF$isMicrosftAjaxLoaded() {
+            if ((typeof (Sys) !== 'undefined' && typeof (Type) !== 'undefined' &&
+                Sys.StringBuilder && typeof (Sys.StringBuilder) === "function" &&
+                Type.registerNamespace && typeof (Type.registerNamespace) === "function" &&
+                Type.registerClass && typeof (Type.registerClass) === "function") ||
+                (typeof (OfficeExt) !== "undefined" && OfficeExt.MsAjaxError)) {
+                return true;
+            }
+            else {
+                return false;
+            }
+        };
+        var officeStrings = null;
+        var loadLocaleStrings = function OSF__OfficeAppFactory_initialize$loadLocaleStrings(appLocale) {
+            var fallbackLocaleTried = false;
+            var loadLocaleStringCallback = function OSF__OfficeAppFactory_initialize$loadLocaleStringCallback() {
+                if (typeof Strings == 'undefined' || typeof Strings.OfficeOM == 'undefined') {
+                    if (!fallbackLocaleTried) {
+                        fallbackLocaleTried = true;
+                        var fallbackLocaleStringFile = basePath + OSF.ConstantNames.DefaultLocale + "/" + OSF.ConstantNames.OfficeStringJS;
+                        _loadScriptHelper.loadScript(fallbackLocaleStringFile, OSF.ConstantNames.OfficeStringsId, loadLocaleStringCallback, true, OSF.ConstantNames.LocaleStringLoadingTimeout);
+                        return false;
+                    }
+                    else {
+                        throw "Neither the locale, " + appLocale.toLowerCase() + ", provided by the host app nor the fallback locale " + OSF.ConstantNames.DefaultLocale + " are supported.";
+                    }
+                }
+                else {
+                    fallbackLocaleTried = false;
+                    officeStrings = Strings.OfficeOM;
+                }
+            };
+            if (!isMicrosftAjaxLoaded()) {
+                window.Type = Function;
+                Type.registerNamespace = function (ns) {
+                    window[ns] = window[ns] || {};
+                };
+                Type.prototype.registerClass = function (cls) {
+                    cls = {};
+                };
+            }
+            var localeStringFile = basePath + OSF.getSupportedLocale(appLocale, OSF.ConstantNames.DefaultLocale) + "/" + OSF.ConstantNames.OfficeStringJS;
+            _loadScriptHelper.loadScript(localeStringFile, OSF.ConstantNames.OfficeStringsId, loadLocaleStringCallback, true, OSF.ConstantNames.LocaleStringLoadingTimeout);
+        };
+        var onAppCodeAndMSAjaxReady = function OSF__OfficeAppFactory_initialize$onAppCodeAndMSAjaxReady(loadSuccess) {
+            if (loadSuccess) {
                 _initializationHelper = new OSF.InitializationHelper(_hostInfo, _WebAppState, _context, _settings, _hostFacade);
+                if (_hostInfo.hostPlatform == "web" && _initializationHelper.saveAndSetDialogInfo) {
+                    _initializationHelper.saveAndSetDialogInfo(getQueryStringValue("_host_Info"));
+                }
                 _initializationHelper.setAgaveHostCommunication();
                 getAppContextAsync(_WebAppState.wnd, function (appContext) {
+                    if (OSF.AppTelemetry && OSF.AppTelemetry.logAppCommonMessage) {
+                        OSF.AppTelemetry.logAppCommonMessage("getAppContextAsync callback start");
+                    }
                     _appInstanceId = appContext._appInstanceId;
-                    var postLoadLocaleStringInitialization = function OSF__OfficeAppFactory_initialize$postLoadLocaleStringInitialization() {
-                        var retryNumber = 100;
-                        var t;
-                        function appReady() {
-                            if (Microsoft.Office.WebExtension.initialize != undefined) {
-                                _initializationHelper.prepareRightBeforeWebExtensionInitialize(appContext);
-                                if (t != undefined)
-                                    window.clearTimeout(t);
-                            } else if (retryNumber == 0) {
-                                clearTimeout(t);
+                    var updateVersionInfo = function updateVersionInfo() {
+                        var hostVersionItems = _hostInfo.hostSpecificFileVersion.split(".");
+                        if (appContext.get_appMinorVersion) {
+                            var isIOS = _hostInfo.hostPlatform == "ios";
+                            if (!isIOS) {
+                                if (isNaN(appContext.get_appMinorVersion())) {
+                                    appContext._appMinorVersion = parseInt(hostVersionItems[1]);
+                                }
+                                else if (hostVersionItems.length > 1 && !isNaN(Number(hostVersionItems[1]))) {
+                                    appContext._appMinorVersion = parseInt(hostVersionItems[1]);
+                                }
+                            }
+                        }
+                        if (_hostInfo.isDialog) {
+                            appContext._isDialog = _hostInfo.isDialog;
+                        }
+                    };
+                    updateVersionInfo();
+                    var appReady = function appReady() {
+                        _initializationHelper.prepareApiSurface && _initializationHelper.prepareApiSurface(appContext);
+                        _loadScriptHelper.waitForFunction(function () { return Microsoft.Office.WebExtension.initialize != undefined; }, function (initializedDeclared) {
+                            if (initializedDeclared) {
+                                if (_initializationHelper.prepareApiSurface) {
+                                    Microsoft.Office.WebExtension.initialize(_initializationHelper.getInitializationReason(appContext));
+                                }
+                                else {
+                                    _initializationHelper.prepareRightBeforeWebExtensionInitialize(appContext);
+                                }
+                                _initializationHelper.prepareRightAfterWebExtensionInitialize && _initializationHelper.prepareRightAfterWebExtensionInitialize();
+                            }
+                            else {
                                 throw "Office.js has not been fully loaded yet. Please try again later or make sure to add your initialization code on the Office.initialize function.";
-                            } else {
-                                retryNumber--;
-                                t = window.setTimeout(appReady, 100);
                             }
+                        }, 400, 50);
+                    };
+                    if (!_loadScriptHelper.isScriptLoading(OSF.ConstantNames.OfficeStringsId)) {
+                        loadLocaleStrings(appContext.get_appUILocale());
+                    }
+                    _loadScriptHelper.waitForScripts([OSF.ConstantNames.OfficeStringsId], function () {
+                        if (officeStrings && !Strings.OfficeOM) {
+                            Strings.OfficeOM = officeStrings;
                         }
-                        ;
                         _initializationHelper.loadAppSpecificScriptAndCreateOM(appContext, appReady, basePath);
-                    };
-                    var getSupportedLocale = function OSF__OfficeAppFactory_initialize$getSupportedLocale(locale) {
-                        if (!locale) {
-                            return OSF.ConstantNames.DefaultLocale;
-                        }
-                        var supportedLocale;
-                        locale = locale.toLowerCase();
-                        if (locale in OSF.ConstantNames.SupportedLocales) {
-                            supportedLocale = locale;
-                        } else {
-                            var localeParts = locale.split('-', 1);
-                            if (localeParts && localeParts.length > 0) {
-                                supportedLocale = OSF.ConstantNames.AssociatedLocales[localeParts[0]];
-                            }
-                        }
-                        if (!supportedLocale) {
-                            supportedLocale = OSF.ConstantNames.DefaultLocale;
-                        }
-                        return supportedLocale;
-                    };
-                    var fallbackLocaleTried = false;
-                    var loadLocaleStringCallback = function OSF__OfficeAppFactory_initialize$loadLocaleStringCallback() {
-                        if (typeof Strings == 'undefined' || typeof Strings.OfficeOM == 'undefined') {
-                            if (!fallbackLocaleTried) {
-                                fallbackLocaleTried = true;
-                                var fallbackLocaleStringFile = basePath + OSF.ConstantNames.DefaultLocale + "/" + OSF.ConstantNames.OfficeStringJS;
-                                _loadScript(fallbackLocaleStringFile, loadLocaleStringCallback);
-                            } else {
-                                throw "Neither the locale, " + appContext.get_appUILocale().toLowerCase() + ", provided by the host app nor the fallback locale " + OSF.ConstantNames.DefaultLocale + " are supported.";
-                            }
-                        } else {
-                            fallbackLocaleTried = false;
-                            postLoadLocaleStringInitialization();
-                        }
-                    };
-                    var localeStringFile = OSF.OUtil.formatString("{0}{1}/{2}", basePath, getSupportedLocale(appContext.get_appUILocale()), OSF.ConstantNames.OfficeStringJS);
-                    _loadScript(localeStringFile, loadLocaleStringCallback, OSF.ConstantNames.LocaleStringLoadingTimeout);
+                    });
                 });
-            } else if (numberOfTimeForMsAjaxTries === 0) {
-                clearTimeout(timerId);
-                throw "MicrosoftAjax.js is not loaded successfully.";
-            } else {
-                numberOfTimeForMsAjaxTries--;
-                timerId = window.setTimeout(loadLocaleStringsAndAppSpecificCode, 100);
+            }
+            else {
+                var errorMsg = "MicrosoftAjax.js is not loaded successfully.";
+                if (OSF.AppTelemetry && OSF.AppTelemetry.logAppException) {
+                    OSF.AppTelemetry.logAppException(errorMsg);
+                }
+                throw errorMsg;
+            }
+        };
+        var onAppCodeReady = function OSF__OfficeAppFactory_initialize$onAppCodeReady() {
+            if (OSF.AppTelemetry && OSF.AppTelemetry.setOsfControlAppCorrelationId) {
+                OSF.AppTelemetry.setOsfControlAppCorrelationId(_hostInfo.osfControlAppCorrelationId);
+            }
+            if (_loadScriptHelper.isScriptLoading(OSF.ConstantNames.MicrosoftAjaxId)) {
+                _loadScriptHelper.waitForScripts([OSF.ConstantNames.MicrosoftAjaxId], onAppCodeAndMSAjaxReady);
+            }
+            else {
+                _loadScriptHelper.waitForFunction(isMicrosftAjaxLoaded, onAppCodeAndMSAjaxReady, 500, 100);
             }
         };
         if (_hostInfo.isO15) {
-            _loadScript(basePath + OSF.ConstantNames.O15InitHelper, loadLocaleStringsAndAppSpecificCode);
-        } else {
+            _loadScriptHelper.loadScript(basePath + OSF.ConstantNames.O15InitHelper, OSF.ConstantNames.O15MappingId, onAppCodeReady);
+        }
+        else {
             var hostSpecificFileName;
             hostSpecificFileName = _hostInfo.hostType + "-" + _hostInfo.hostPlatform + "-" + _hostInfo.hostSpecificFileVersion + ".debug.js";
-            _loadScript(basePath + hostSpecificFileName.toLowerCase(), loadLocaleStringsAndAppSpecificCode);
+            _loadScriptHelper.loadScript(basePath + hostSpecificFileName.toLowerCase(), OSF.ConstantNames.HostFileId, onAppCodeReady);
+        }
+        if (_hostInfo.hostLocale) {
+            loadLocaleStrings(_hostInfo.hostLocale);
+        }
+        if (requiresMsAjax && !isMicrosftAjaxLoaded()) {
+            var msAjaxCDNPath = (window.location.protocol.toLowerCase() === 'https:' ? 'https:' : 'http:') + '//ajax.aspnetcdn.com/ajax/3.5/MicrosoftAjax.js';
+            _loadScriptHelper.loadScriptParallel(msAjaxCDNPath, OSF.ConstantNames.MicrosoftAjaxId);
         }
         window.confirm = function OSF__OfficeAppFactory_initialize$confirm(message) {
             throw 'Function window.confirm is not supported.';
@@ -385,41 +764,24 @@ OSF._OfficeAppFactory = (function OSF__OfficeAppFactory() {
             throw 'Function window.prompt is not supported.';
             return null;
         };
-
         window.history.replaceState = null;
         window.history.pushState = null;
     };
     initialize();
     return {
-        getId: function OSF__OfficeAppFactory$getId() {
-            return _WebAppState.id;
-        },
-        getClientEndPoint: function OSF__OfficeAppFactory$getClientEndPoint() {
-            return _WebAppState.clientEndPoint;
-        },
-        getContext: function OSF__OfficeAppFactory$getContext() {
-            return _context;
-        },
-        setContext: function OSF__OfficeAppFactory$setContext(context) {
-            _context = context;
-        },
-        getHostFacade: function OSF__OfficeAppFactory$getHostFacade() {
-            return _hostFacade;
-        },
-        setHostFacade: function setHostFacade(hostFacade) {
-            _hostFacade = hostFacade;
-        },
-        getInitializationHelper: function OSF__OfficeAppFactory$getInitializationHelper() {
-            return _initializationHelper;
-        },
+        getId: function OSF__OfficeAppFactory$getId() { return _WebAppState.id; },
+        getClientEndPoint: function OSF__OfficeAppFactory$getClientEndPoint() { return _WebAppState.clientEndPoint; },
+        getContext: function OSF__OfficeAppFactory$getContext() { return _context; },
+        setContext: function OSF__OfficeAppFactory$setContext(context) { _context = context; },
+        getHostFacade: function OSF__OfficeAppFactory$getHostFacade() { return _hostFacade; },
+        setHostFacade: function setHostFacade(hostFacade) { _hostFacade = hostFacade; },
+        getInitializationHelper: function OSF__OfficeAppFactory$getInitializationHelper() { return _initializationHelper; },
         getCachedSessionSettingsKey: function OSF__OfficeAppFactory$getCachedSessionSettingsKey() {
             return (_WebAppState.conversationID != null ? _WebAppState.conversationID : _appInstanceId) + "CachedSessionSettings";
         },
-        getWebAppState: function OSF__OfficeAppFactory$getWebAppState() {
-            return _WebAppState;
-        },
-        getWindowLocationHash: function OSF__OfficeAppFactory$getHash() {
-            return _windowLocationHash;
-        }
+        getWebAppState: function OSF__OfficeAppFactory$getWebAppState() { return _WebAppState; },
+        getWindowLocationHash: function OSF__OfficeAppFactory$getHash() { return _windowLocationHash; },
+        getWindowLocationSearch: function OSF__OfficeAppFactory$getSearch() { return _windowLocationSearch; },
+        getLoadScriptHelper: function OSF__OfficeAppFactory$getLoadScriptHelper() { return _loadScriptHelper; }
     };
 })();
