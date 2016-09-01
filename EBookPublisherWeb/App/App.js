@@ -24,7 +24,6 @@ var app = (function () {
             $('#notification-message').hide();
         });
 
-
         // After initialization, expose a common notification function
         app.showNotification = function (header, text) {
             $('#notification-message-header').text(header);
@@ -35,7 +34,6 @@ var app = (function () {
 
     return app;
 })();
-
 
 // *********************************************************
 //
