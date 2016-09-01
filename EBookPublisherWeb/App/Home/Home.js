@@ -19,12 +19,12 @@
 
     function transmitChunk() {
         // Get a reference to the <DIV> where we will write the outcome of our operation
-        var report = document.getElementById("transmissionReport");
+        var report = $('#transmissionReport');
 
         // Get the selected value in the drop-down. We will use this value as a parameter
         // in the getFileAsync method. NOTE: The display values in the drop-down are shown in MB,
         // but the actual value returned is in Bytes (see the HTML for the drop-down in PowerPointEBookPublisher.html)
-        var chunksize = document.getElementById("chunkSize").value;
+        var chunksize = $('#chuckSize').value;
 
         // Initialize the variable that we will use to store the number of slices returned
         // by the getFileAsync method
@@ -70,7 +70,7 @@
                 // Now we'll actually do something with each slide
                 for (var slice = 0; slice < totalSlices; slice++) {
                     // We'll call the getSliceAsync method of the File object, and pass in the
-                    // integer in the above 'for' loop as the first paramter. This is simply an index
+                    // integer in the above 'for' loop as the first parameter. This is simply an index
                     // which indicates which slice to get
                     var currentSlice = currentFile.getSliceAsync(slice, function (result) {
                         if (result.status == "succeeded") {
