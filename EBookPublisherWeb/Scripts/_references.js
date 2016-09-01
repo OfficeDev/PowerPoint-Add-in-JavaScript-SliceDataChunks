@@ -1,4 +1,5 @@
-﻿/* Required to correctly initalize Office.js for intellisense */
+﻿/// <reference path="jquery-1.12.4.js" />
+/* Required to correctly initalize Office.js for intellisense */
 /// <reference path="_officeintellisense.js" />
 /* Use offline copy of Office.js for intellisense */
 /// <reference path="office/1/outlook-win32.debug.js" />
