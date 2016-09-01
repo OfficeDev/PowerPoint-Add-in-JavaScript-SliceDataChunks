@@ -122,8 +122,8 @@
       </bt:Urls>
       <!-- ShortStrings max characters==125. -->
       <bt:ShortStrings>
-        <bt:String id="EBookPub.TaskpaneButton.Label" DefaultValue="Publish" />
-        <bt:String id="EBookPub.Group1Label" DefaultValue="EBook Publisher" />
+        <bt:String id="EBookPub.TaskpaneButton.Label" DefaultValue="Publisher" />
+        <bt:String id="EBookPub.Group1Label" DefaultValue="EBook" />
         <bt:String id="EBookPub.GetStarted.Title" DefaultValue="Get started with the EBook Publisher add-in!" />
       </bt:ShortStrings>
       <!-- LongStrings max characters==250. -->
