@@ -14,14 +14,14 @@
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{C1CDDADD-2546-481F-9697-4EA41081F2FC};{14822709-B5A1-4724-98CA-57A101D1B079};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <IncludeAssemblyInPackage>False</IncludeAssemblyInPackage>
-    <AppFeaturePartId>{afe21f0a-b072-44dd-840d-0d0a8b396fb5}</AppFeaturePartId>
-    <WspPartId>{32d2e0f6-c869-4aab-8fb9-96d63fdda805}</WspPartId>
-    <WorkflowPartId>{3b7a66c2-50c2-4ca7-90ce-2283791463c9}</WorkflowPartId>
-    <CspkgPartId>{6e218eb2-f35b-4792-897b-df8724c0242e}</CspkgPartId>
-    <SqlPackagePartId>{b3706978-df12-4e6c-899b-1f0fdd30de32}</SqlPackagePartId>
+    <AppFeaturePartId>{0b36495b-5001-47ac-8a88-eb761164d1cf}</AppFeaturePartId>
+    <WspPartId>{31852971-a44a-48e2-a4b6-af6ca9d3b437}</WspPartId>
+    <WorkflowPartId>{d7952154-fa32-4e32-9e00-45e8690bc100}</WorkflowPartId>
+    <CspkgPartId>{230c4960-961d-4e7a-9430-27b88f65cd20}</CspkgPartId>
+    <SqlPackagePartId>{ac346b48-8b1e-4f38-ac15-4885ed8f50ae}</SqlPackagePartId>
     <ProjectMode>OfficeApp</ProjectMode>
-    <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
-    <MinimumOfficeToolsVersion>12.2</MinimumOfficeToolsVersion>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <MinimumOfficeToolsVersion>14.0</MinimumOfficeToolsVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
