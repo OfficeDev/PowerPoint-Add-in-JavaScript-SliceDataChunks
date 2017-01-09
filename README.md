@@ -54,7 +54,9 @@ The sample demonstrates:
 <a name="build"></a>
 ## Build and debug ##
 
-1. In Visual Studio, press F5 to build and deploy the sample add-in. The Adventure Works.pptx file opens in PowerPoint.
+1. In Visual Studio, press F5 to build and deploy the sample add-in. 
+2. If the The `Adventure Works.pptx` file does not open automatically, open it. It is in the project at `\EBookPublisher`.
+3. On the **Home** ribbon, click **Open** in the **EBook Publisher** group.
 2. In the task pane add-in, choose a size for the data chunk.
 3. Click the **Publish now!** button. 
 
