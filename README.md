@@ -1,3 +1,16 @@
+---
+topic: sample
+products:
+- PowerPoint
+- Office 365
+languages:
+- JavaScript
+extensions:
+  contentType: samples
+  technologies:
+  - Add-ins
+  createdDate: 8/18/2015 1:32:10 PM
+---
 # PowerPoint Add-in: Send a PowerPoint document in chunks to a service
 
 **Table of contents**
